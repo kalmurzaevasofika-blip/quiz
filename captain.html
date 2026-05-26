@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Капитан — Очень Странные Дела</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#03030a;color:#e8dcc8;font-family:'Playfair Display',serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px);pointer-events:none;z-index:9999;}
+.logo{font-size:1.3rem;letter-spacing:.15em;text-transform:uppercase;color:#c8150a;text-shadow:0 0 15px rgba(200,21,10,.5);margin-bottom:2rem;text-align:center;font-weight:900;}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(200,21,10,.25);border-radius:8px;padding:1.5rem;width:100%;max-width:380px;display:flex;flex-direction:column;gap:1rem;}
+label{font-size:.72rem;letter-spacing:.25em;text-transform:uppercase;color:rgba(232,220,200,.45);}
+input,select{background:rgba(255,255,255,.04);border:1px solid rgba(200,21,10,.35);color:#e8dcc8;padding:.7rem .9rem;font-family:'Playfair Display',serif;font-size:.95rem;border-radius:4px;width:100%;outline:none;}
+.btn{background:#9a0a0a;color:#e8dcc8;border:none;padding:.85rem;font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;border-radius:4px;transition:all .2s;width:100%;}
+.btn:hover{background:#c41212;}
+
+/* WAITING */
+#screen-wait{display:none;flex-direction:column;align-items:center;gap:1rem;text-align:center;}
+.wait-label{font-size:.85rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(232,220,200,.4);font-style:italic;}
+.pulse{width:14px;height:14px;background:#c8150a;border-radius:50%;animation:pulse 1.4s infinite;box-shadow:0 0 10px rgba(200,21,10,.5);}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.6}}
+
+/* QUESTION */
+#screen-question{display:none;flex-direction:column;gap:1rem;width:100%;max-width:420px;}
+.q-tag{font-size:.68rem;letter-spacing:.3em;text-transform:uppercase;color:#c8150a;font-style:italic;}
+.q-text{font-size:1.15rem;font-weight:700;line-height:1.4;color:#e8dcc8;background:rgba(255,255,255,.04);border-left:3px solid #cc1111;padding:.9rem 1rem;border-radius:0 6px 6px 0;}
+.ans-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;}
+.ans-btn{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);color:#e8dcc8;padding:1rem;font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;border-radius:6px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:.6rem;}
+.ans-btn:hover{background:rgba(200,21,10,.2);border-color:#c8150a;}
+.ans-btn.selected{background:rgba(200,21,10,.4);border-color:#e82020;border-width:2px;}
+.ans-btn.sent{background:rgba(20,100,40,.5);border-color:#4ade80;color:#4ade80;cursor:default;}
+.ans-letter{width:28px;height:28px;background:rgba(0,0,0,.3);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.95rem;flex-shrink:0;}
+
+/* SENT */
+#screen-sent{display:none;flex-direction:column;align-items:center;gap:1rem;text-align:center;}
+.sent-icon{font-size:3rem;}
+.sent-text{font-size:1.1rem;font-weight:700;color:#4ade80;}
+.sent-sub{font-size:.85rem;color:rgba(232,220,200,.4);font-style:italic;}
+
+.timer-bar{height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;width:100%;}
+.timer-fill{height:100%;background:linear-gradient(90deg,#cc1111,#ff6600);border-radius:3px;transition:width 1s linear;}
+.timer-num{font-size:1.3rem;font-weight:700;color:#cc1111;text-align:right;}
+</style>
+</head>
+<body>
+<div class="logo">⚡ Очень Странные Дела</div>
+
+<!-- LOGIN -->
+<div id="screen-login" class="card">
+  <div>
+    <label>Название команды</label>
+    <input id="team-input" type="text" placeholder="Команда 1" maxlength="30">
+  </div>
+  <button class="btn" onclick="joinGame()">Войти в игру</button>
+</div>
+
+<!-- WAIT -->
+<div id="screen-wait">
+  <div class="pulse"></div>
+  <div class="wait-label" id="wait-text">Ожидание вопроса...</div>
+  <div style="font-size:.8rem;color:rgba(232,220,200,.3);font-style:italic;" id="team-display"></div>
+</div>
+
+<!-- QUESTION -->
+<div id="screen-question">
+  <div class="q-tag" id="q-tag">Вопрос 1</div>
+  <div style="display:flex;align-items:center;gap:.7rem;">
+    <div class="timer-bar" style="flex:1"><div class="timer-fill" id="c-timer-fill"></div></div>
+    <div class="timer-num" id="c-timer-num">25</div>
+  </div>
+  <div class="q-text" id="q-text-cap">Загрузка...</div>
+  <div class="ans-grid" id="ans-grid-cap"></div>
+</div>
+
+<!-- SENT -->
+<div id="screen-sent">
+  <div class="sent-icon">✅</div>
+  <div class="sent-text" id="sent-answer">Ответ отправлен!</div>
+  <div class="sent-sub">Ожидай следующий вопрос...</div>
+</div>
+
+<script>
+const SUPA_URL='https://scqcnwzcorfkpcnnkhiu.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjcWNud3pjb3Jma3Bjbm5raGl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MTMxMTksImV4cCI6MjA5NTM4OTExOX0._Ki8xd-ILrq-sqZ08M6NFzS2L18_GEoWtHFsB64ukg0';
+const LETTERS=['A','B','C','D'];
+
+let myTeam='', currentQ=null, timerInt=null, tLeft=25;
+
+function showScreen(id){
+  ['screen-login','screen-wait','screen-question','screen-sent'].forEach(s=>{
+    document.getElementById(s).style.display='none';
+  });
+  document.getElementById(id).style.display='flex';
+}
+
+async function joinGame(){
+  const t=document.getElementById('team-input').value.trim();
+  if(!t){alert('Введи название команды!');return;}
+  myTeam=t;
+  document.getElementById('team-display').textContent='Команда: '+t;
+  showScreen('screen-wait');
+  subscribeToQuestions();
+}
+
+function subscribeToQuestions(){
+  // Poll for current question every 2 seconds
+  setInterval(async()=>{
+    const res=await fetch(`${SUPA_URL}/rest/v1/current_question?select=*&order=id.desc&limit=1`,{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    if(!res.ok)return;
+    const data=await res.json();
+    if(data&&data.length>0){
+      const q=data[0];
+      if(!currentQ||currentQ.id!==q.id){
+        currentQ=q;
+        if(q.active){
+          showQuestion(q);
+        } else {
+          showScreen('screen-wait');
+          document.getElementById('wait-text').textContent='Ожидание следующего вопроса...';
+        }
+      }
+    }
+  },2000);
+}
+
+function showQuestion(q){
+  clearInterval(timerInt);
+  const isSuper=q.is_super||false;
+  tLeft=isSuper?45:25;
+  document.getElementById('q-tag').textContent=(isSuper?'⚡ Супер игра — ':'')+'Вопрос '+q.num;
+  document.getElementById('q-text-cap').textContent=q.question;
+  const grid=document.getElementById('ans-grid-cap');
+  grid.innerHTML='';
+  const answers=JSON.parse(q.answers);
+  answers.forEach((ans,i)=>{
+    const b=document.createElement('button');
+    b.className='ans-btn';
+    b.innerHTML=`<span class="ans-letter">${LETTERS[i]}</span>${ans}`;
+    b.onclick=()=>selectAnswer(LETTERS[i],b,answers);
+    grid.appendChild(b);
+  });
+  showScreen('screen-question');
+  startCaptainTimer(tLeft);
+}
+
+function startCaptainTimer(sec){
+  clearInterval(timerInt);
+  tLeft=sec;
+  updateCTimer();
+  timerInt=setInterval(()=>{
+    tLeft--;
+    updateCTimer();
+    if(tLeft<=0){clearInterval(timerInt);}
+  },1000);
+}
+
+function updateCTimer(){
+  const total=document.getElementById('q-tag').textContent.includes('Супер')?45:25;
+  document.getElementById('c-timer-num').textContent=tLeft;
+  document.getElementById('c-timer-fill').style.width=(tLeft/total*100)+'%';
+}
+
+async function selectAnswer(letter,btn,answers){
+  clearInterval(timerInt);
+  // Mark button
+  document.querySelectorAll('.ans-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  // Send to supabase
+  await fetch(`${SUPA_URL}/rest/v1/answers`,{
+    method:'POST',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+    body:JSON.stringify({team:myTeam,answer:letter,question_num:currentQ.num})
+  });
+  // Show sent screen
+  document.getElementById('sent-answer').textContent='Ответ «'+letter+'» отправлен!';
+  showScreen('screen-sent');
+}
+</script>
+</body>
+</html>
